@@ -16,8 +16,8 @@ type AltTextResponse struct {
 	AltTexts []string `json:"alt_texts"`
 }
 
-func runOllamaCommand(imagePath string) (string, error) {
-	cmd := exec.Command("ollama", "run", "llava", fmt.Sprintf("You are an assistant for the visually impaired. Answer concisely for someone who is visually impaired. Write an alt-text for this image. Your response should be one or two sentences. Just state what you see descriptively. %s", imagePath))
+func runOllamaCommand(imagePath string, model string) (string, error) {
+	cmd := exec.Command("ollama", "run", model, fmt.Sprintf("You are an assistant for the visually impaired. Answer concisely for someone who is visually impaired. Write an alt-text for this image. Your response should be one or two sentences. Just state what you see descriptively. %s", imagePath))
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -49,8 +49,14 @@ func parseOutput(output string) string {
 func altTextHandler(w http.ResponseWriter, r *http.Request) {
 	imagePath := r.URL.Query().Get("image_path")
 	count := 3
+	model := r.URL.Query().Get("model")
+
 	if cnt := r.URL.Query().Get("count"); cnt != "" {
 		fmt.Sscanf(cnt, "%d", &count)
+	}
+
+	if model == "" {
+		model = "llava"
 	}
 
 	if imagePath == "" {
@@ -61,7 +67,7 @@ func altTextHandler(w http.ResponseWriter, r *http.Request) {
 	var altTexts []string
 
 	for i := 0; i < count; i++ {
-		output, err := runOllamaCommand(imagePath)
+		output, err := runOllamaCommand(imagePath, model)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error executing command: %v", err), http.StatusInternalServerError)
 			return
@@ -83,6 +89,7 @@ func main() {
 	help := flag.Bool("help", false, "Show usage information.")
 	server := flag.Bool("server", false, "Run as a web server.")
 	port := flag.String("port", "8080", "Port to run the server on. Default is 8080.")
+	model := flag.String("model", "llava", "Model to use for generating alt text. Default is llava.")
 
 	flag.Usage = func() {
 		fmt.Println("Usage:")
@@ -119,7 +126,7 @@ func main() {
 		var altTexts []string
 
 		for i := 0; i < *count; i++ {
-			output, err := runOllamaCommand(imagePath)
+			output, err := runOllamaCommand(imagePath, *model)
 			if err != nil {
 				fmt.Println("Error executing command:", err)
 				return
