@@ -82,6 +82,7 @@ func main() {
 	count := flag.Int("count", 3, "Number of alt texts to generate. Default is 3.")
 	help := flag.Bool("help", false, "Show usage information.")
 	server := flag.Bool("server", false, "Run as a web server.")
+	port := flag.String("port", "8080", "Port to run the server on. Default is 8080.")
 
 	flag.Usage = func() {
 		fmt.Println("Usage:")
@@ -103,9 +104,14 @@ func main() {
 	}
 
 	if *server {
+		if _, err := fmt.Sscanf(*port, "%d", new(int)); err != nil {
+			fmt.Println("Invalid port number.")
+			return
+		}
+
 		http.HandleFunc("/generate-alt-text", altTextHandler)
-		fmt.Println("Running server on :8080")
-		if err := http.ListenAndServe(":8080", nil); err != nil {
+		fmt.Println("Running server on :", *port)
+		if err := http.ListenAndServe(":"+*port, nil); err != nil {
 			fmt.Println("Error starting server:", err)
 		}
 	} else {
